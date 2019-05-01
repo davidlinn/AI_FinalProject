@@ -45,7 +45,8 @@ class GameProblem(SearchProblem):
     def is_goal(self, state):
         '''Returns true if state is the final state
         '''
-        return True
+        if state == GOAL:
+            return True
 
     def cost(self, state, action, state2):
         '''Returns the cost of applying `action` from `state` to `state2`.
@@ -79,7 +80,8 @@ class GameProblem(SearchProblem):
             n = n + len(self.POSITIONS['customer2'])
         if 'customer3' in self.POSITIONS.keys():
             n = n + len(self.POSITIONS['customer3'])
-        #define state as tuple (starting position (row,col) tuple, num pizzas requested, num of pizzas holding)
+        #define state as tuple (starting position (row,col) tuple, 
+        # num active orders, num of pizzas holding)
         initial_state = (self.AGENT_START,n,0)
         final_state= (self.AGENT_START,0,0)
         algorithm= simpleai.search.astar
@@ -92,7 +94,8 @@ class GameProblem(SearchProblem):
     def printState (self,state):
         '''Return a string to pretty-print the state '''
         
-        pps=''
+        pps='(Row,Col)=('+state[0][0]+','+state[0][1]+')\n'
+        pps=pps+'Num Orders: '+state[1]+', Num Pizzas Holding: '+state[2]
         return (pps)
 
     def getPendingRequests (self,state):
