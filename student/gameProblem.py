@@ -75,6 +75,33 @@ class GameProblem(SearchProblem):
 		else:
 			return 0
 
+	def getClosestOrderLoc(self,state,pos):
+		''' returns the location of the closest active order to position pos
+		'''
+		orders = self.getActiveOrders(state)
+		minDist = self.CONFIG['map_size'][0] + self.CONFIG['map_size'][1] + 1 # no order can be this far
+		minLoc = None
+		for i in range(len(orders)):
+			if orders[i] is not 0:
+				loc = self.CUSTOMERS[i]
+				dist = abs(pos[0]-loc[0]) + abs(pos[1]-loc[1])
+				if (dist < minDist):
+					minLoc = loc
+					minDist = dist
+		return minLoc
+
+	def getClosestRestaurant(self,state,pos):
+		''' returns the location of the closest restaurant (shop)
+		'''
+		minDist = self.CONFIG['map_size'][0] + self.CONFIG['map_size'][1] + 1 # no restaurant can be this far
+		minLoc = None
+		for loc in self.SHOPS:
+			dist = abs(pos[0]-loc[0]) + abs(pos[1]-loc[1])
+			if (dist < minDist):
+				minLoc = loc
+				minDist = dist
+		return minLoc
+
    # --------------- Common functions to a SearchProblem -----------------
 
 	def actions(self, state):
@@ -145,15 +172,30 @@ class GameProblem(SearchProblem):
 		   The returned value is a number (integer or floating point).
 		   By default this function returns `1`.
 		'''
-		return 1
+		return 1 # all actions have unit cost
 
 	def heuristic(self, state):
 		'''Returns the heuristic for `state`
 		'''
-		# if order locs empty, MD from agent loc to (0,0)
-		# else if pizzas held, MD to order loc + MD order loc to (0,0)
-		# else, MD to restaurant + MD to order loc + MD order loc to (0,0)
-		return 0
+		pos = self.getPosition(state)
+		# if order locs empty, Manhattan Distance from agent loc to (0,0)
+		if self.numActiveOrders(state) == 0:
+			return (pos[0] + pos[1])
+		# else if pizzas held, MD to closest order loc + MD closest order loc to (0,0)
+		elif self.getPizzasHeld(state) > 0:
+			closestOrder = self.getClosestOrderLoc(state,pos)
+			distToOrder = abs(pos[0]-closestOrder[0]) + abs(pos[1]-closestOrder[1])
+			distHome = closestOrder[0] + closestOrder[1]
+			return (distToOrder + distHome)
+		# else, MD to nearest restaurant + MD to order loc + MD order loc to (0,0)
+		else:
+			closestRestaurant = self.getClosestRestaurant(state,pos)
+			distToRestaurant = abs(pos[0]-closestRestaurant[0])+abs(pos[1]-closestRestaurant[1])
+			closestOrder = self.getClosestOrderLoc(state,closestRestaurant)
+			distToOrder = abs(closestRestaurant[0]-closestOrder[0]) + abs(closestRestaurant[1]-closestOrder[1])
+			distHome = closestOrder[0] + closestOrder[1]
+			return (distToRestaurant + distToOrder + distHome)
+
 
 
 	def setup (self):
