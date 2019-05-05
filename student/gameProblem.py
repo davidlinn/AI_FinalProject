@@ -245,7 +245,6 @@ class GameProblem(SearchProblem):
 		algorithm= simpleai.search.astar
 		#algorithm= simpleai.search.breadth_first
 		#algorithm= simpleai.search.depth_first
-		#algorithm= simpleai.search.limited_depth_first
 
 		return initial_state,final_state,algorithm
 
@@ -260,7 +259,11 @@ class GameProblem(SearchProblem):
 			MUST return None if the position is not a customer.
 			This information is used to show the proper customer image.
 		'''
-		return self.numPizzasAtLoc(state,state[0])
+		pos = self.getPosition(state)
+		if pos in self.CUSTOMERS:
+			return self.numPizzasAtLoc(state,pos)
+		else:
+			return None
 
 	# -------------------------------------------------------------- #
 	# --------------- DO NOT EDIT BELOW THIS LINE  ----------------- #
