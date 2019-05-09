@@ -157,7 +157,6 @@ class GameProblem(SearchProblem):
 			return (distToRestaurant + distToOrder + distHome)
 
 	def heuristic2(self,state): #NOT ADMISSIBLE
-		print(state)
 		pos = self.getPosition(state)
 		# base case: order locs empty. return distance from home
 		if self.numActiveOrders(state) == 0:
@@ -200,7 +199,7 @@ class GameProblem(SearchProblem):
 		p = self.southpos(pos)
 		if self.validpos(p) and not self.blocked(p):
 			actions.append('South')
-		print('Found possible actions',actions,'for state',state)
+		#print('Found possible actions',actions,'for state',state)
 		return actions
 	
 
@@ -210,7 +209,6 @@ class GameProblem(SearchProblem):
 		if action is 'Load':
 			#newPizzasHeld = min(self.MAXBAGS,self.numActiveOrders(state))
 			newPizzasHeld = self.getPizzasHeld(state) + 1
-			print('self.MAXBAGS:',self.MAXBAGS,'numactiveorders:',self.numActiveOrders(state))
 			next_state = (state[0],state[1],newPizzasHeld)
 		if action is 'Unload':
 			loc = self.getPosition(state)
@@ -229,7 +227,7 @@ class GameProblem(SearchProblem):
 			next_state = (self.eastpos(pos),state[1],state[2])
 		if action is 'South':
 			next_state = (self.southpos(pos),state[1],state[2])
-		print('Given state',state,'and action',action,'next state is',next_state)
+		#print('Given state',state,'and action',action,'next state is',next_state)
 		return next_state
 
 
@@ -244,7 +242,16 @@ class GameProblem(SearchProblem):
 		   The returned value is a number (integer or floating point).
 		   By default this function returns `1`.
 		'''
-		return 1 # all actions have unit cost
+		pizzaPenalty = 1 # penalty per movement per pizza
+		costByTerrain = True # if true, takes terrain type into account when calculating cost
+		
+		if action in self.MOVES:
+			baseCost = 1 + pizzaPenalty*self.getPizzasHeld(state)
+			if costByTerrain:
+				baseCost = baseCost * self.getAttribute(state2[0], 'cost')
+			return baseCost
+		else:
+			return 1
 
 	def heuristic(self, state):
 		'''Returns the heuristic for `state`
