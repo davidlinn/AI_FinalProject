@@ -92,6 +92,7 @@ class GameProblem(SearchProblem):
 
 	def fulfillClosestOrder(self,state,pos):
 		''' simulates fulfilling the closest order. returns new state and cost incurred.
+			used in heuristic2
 		'''
 		orders = list(self.getActiveOrders(state))
 		minDist = self.CONFIG['map_size'][0] + self.CONFIG['map_size'][1] + 1 # no order can be this far
@@ -112,6 +113,7 @@ class GameProblem(SearchProblem):
 
 	def simulateReload(self,state,pos):
 		''' simulates going to restaurant and loading pizza. returns new state and cost incurred.
+			used in heuristic2
 		'''
 		minDist = self.CONFIG['map_size'][0] + self.CONFIG['map_size'][1] + 1 # no restaurant can be this far
 		minLoc = None
