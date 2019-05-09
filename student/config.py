@@ -3,7 +3,7 @@ configuration = {
 "tile_size": 80, 
 "type": "load", #random
 "seed": None,
-"file": "./student/map.txt",
+"file": "./student/map_adv2.txt",
 "map_size": [10, 5],
 "delay": 0.1,
 "debugMap": False,
@@ -33,6 +33,32 @@ configuration = {
             {"agent":None,"image": "default"},
         "attributes":
             {"cost": 1},
+        },
+    "hill": {
+        "graphics":{ 
+            "default": "game/graphics/terrains/hills100.png",
+            "traversed": "game/graphics/terrains/hillsTraversed100.png"
+            },
+        "id":  "hill",
+        "marker": 'H',
+        "num": 0,
+        "state":
+            {"agent":None,"image": "default"},
+        "attributes":
+            {"cost": 3},
+        },
+    "forest": {
+        "graphics":{ 
+            "default": "game/graphics/terrains/forest100.png",
+            "traversed": "game/graphics/terrains/forestTraversed100.png"
+            },
+        "id":  "forest",
+        "marker": 'F',
+        "num": 0,
+        "state":
+            {"agent":None,"image": "default"},
+        "attributes":
+            {"cost": 2},
         },
     "pizza": {
         "graphics":{ 
