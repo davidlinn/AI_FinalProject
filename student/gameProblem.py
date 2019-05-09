@@ -90,6 +90,40 @@ class GameProblem(SearchProblem):
 					minDist = dist
 		return minLoc
 
+	def fulfillClosestOrder(self,state,pos):
+		''' simulates fulfilling the closest order. returns new state and cost incurred.
+		'''
+		orders = list(self.getActiveOrders(state))
+		minDist = self.CONFIG['map_size'][0] + self.CONFIG['map_size'][1] + 1 # no order can be this far
+		minLoc = None
+		minIndex = 0
+		for i in range(len(orders)):
+			if orders[i] is not 0:
+				loc = self.CUSTOMERS[i]
+				dist = abs(pos[0]-loc[0]) + abs(pos[1]-loc[1])
+				if (dist < minDist):
+					minLoc = loc
+					minDist = dist
+					minIndex = i
+		pizzasDelivered = min(self.getPizzasHeld(state),self.numPizzasAtLoc(state,minLoc))
+		orders[minIndex] = orders[minIndex] - pizzasDelivered
+		costIncurred = minDist + pizzasDelivered
+		return (minLoc,tuple(orders),self.getPizzasHeld(state)-pizzasDelivered), costIncurred
+
+	def simulateReload(self,state,pos):
+		''' simulates going to restaurant and loading pizza. returns new state and cost incurred.
+		'''
+		minDist = self.CONFIG['map_size'][0] + self.CONFIG['map_size'][1] + 1 # no restaurant can be this far
+		minLoc = None
+		for loc in self.SHOPS:
+			dist = abs(pos[0]-loc[0]) + abs(pos[1]-loc[1])
+			if (dist < minDist):
+				minLoc = loc
+				minDist = dist
+		pizzasDesired = min(self.numActiveOrders(state),self.MAXBAGS)
+		costIncurred = minDist + (pizzasDesired-self.getPizzasHeld(state))
+		return (minLoc,state[1],pizzasDesired), costIncurred
+
 	def getClosestRestaurant(self,state,pos):
 		''' returns the location of the closest restaurant (shop)
 		'''
@@ -102,6 +136,42 @@ class GameProblem(SearchProblem):
 				minDist = dist
 		return minLoc
 
+	def heuristic1(self,state):
+		pos = self.getPosition(state)
+		# if order locs empty, Manhattan Distance from agent loc to (0,0)
+		if self.numActiveOrders(state) == 0:
+			return (pos[0] + pos[1])
+		# else if pizzas held, MD to closest order loc + MD closest order loc to (0,0)
+		elif self.getPizzasHeld(state) == min(self.numActiveOrders(state),self.MAXBAGS):
+			closestOrder = self.getClosestOrderLoc(state,pos)
+			distToOrder = abs(pos[0]-closestOrder[0]) + abs(pos[1]-closestOrder[1])
+			distHome = closestOrder[0] + closestOrder[1]
+			return (distToOrder + distHome)
+		# else, MD to nearest restaurant + MD to order loc + MD order loc to (0,0)
+		else:
+			closestRestaurant = self.getClosestRestaurant(state,pos)
+			distToRestaurant = abs(pos[0]-closestRestaurant[0])+abs(pos[1]-closestRestaurant[1])
+			closestOrder = self.getClosestOrderLoc(state,closestRestaurant)
+			distToOrder = abs(closestRestaurant[0]-closestOrder[0]) + abs(closestRestaurant[1]-closestOrder[1])
+			distHome = closestOrder[0] + closestOrder[1]
+			return (distToRestaurant + distToOrder + distHome)
+
+	def heuristic2(self,state): #NOT ADMISSIBLE
+		print(state)
+		pos = self.getPosition(state)
+		# base case: order locs empty. return distance from home
+		if self.numActiveOrders(state) == 0:
+			return (pos[0] + pos[1])
+		# else if pizzas held is maxbags or is max of orders, simulate fulfilling closest order + recurse
+		elif self.getPizzasHeld(state) == self.MAXBAGS or self.getPizzasHeld(state) == max(state[1]):
+			nextState, costIncurred = self.fulfillClosestOrder(state,pos)
+			return costIncurred + self.heuristic2(nextState)
+		# else, simulate going to a restaurant and loading up
+		else:
+			nextState, costIncurred = self.simulateReload(state,pos)
+			return costIncurred + self.heuristic2(nextState)
+
+
    # --------------- Common functions to a SearchProblem -----------------
 
 	def actions(self, state):
@@ -112,10 +182,10 @@ class GameProblem(SearchProblem):
 		pos = self.getPosition(state)
 		piz = self.getPizzasHeld(state)
 		# if at a restaurant and num pizzas held < 2 and there are active orders, add 'Load' to list
-		if pos in self.SHOPS and piz < 2 and self.numActiveOrders(state) > 0:
+		if pos in self.SHOPS and piz < self.MAXBAGS and piz < self.numActiveOrders(state):
 			actions.append('Load')
 		# if at a delivery loc and we have at least the num pizzas requested at that location, add 'Unload' to list
-		if pos in self.CUSTOMERS and piz >= self.numPizzasAtLoc(state,pos):
+		if pos in self.CUSTOMERS and self.numPizzasAtLoc(state,pos) > 0 and piz > 0:
 			actions.append('Unload')
 		# if not off grid and not blocked, add direction
 		p = self.westpos(pos)
@@ -138,12 +208,14 @@ class GameProblem(SearchProblem):
 		'''Returns the state reached from this state when the given action is executed
 		'''
 		if action is 'Load':
-			newPizzasHeld = min(self.MAXBAGS,self.numActiveOrders(state))
+			#newPizzasHeld = min(self.MAXBAGS,self.numActiveOrders(state))
+			newPizzasHeld = self.getPizzasHeld(state) + 1
 			print('self.MAXBAGS:',self.MAXBAGS,'numactiveorders:',self.numActiveOrders(state))
 			next_state = (state[0],state[1],newPizzasHeld)
 		if action is 'Unload':
 			loc = self.getPosition(state)
-			pizzasDelivered = self.numPizzasAtLoc(state,loc)
+			#pizzasDelivered = self.numPizzasAtLoc(state,loc)
+			pizzasDelivered = 1
 			active_orders = list(state[1])
 			active_orders[self.CUSTOMERS.index(loc)] = active_orders[self.CUSTOMERS.index(loc)] - pizzasDelivered
 			next_state = (state[0],tuple(active_orders),state[2]-pizzasDelivered)
@@ -177,26 +249,8 @@ class GameProblem(SearchProblem):
 	def heuristic(self, state):
 		'''Returns the heuristic for `state`
 		'''
-		pos = self.getPosition(state)
-		# if order locs empty, Manhattan Distance from agent loc to (0,0)
-		if self.numActiveOrders(state) == 0:
-			return (pos[0] + pos[1])
-		# else if pizzas held, MD to closest order loc + MD closest order loc to (0,0)
-		elif self.getPizzasHeld(state) > 0:
-			closestOrder = self.getClosestOrderLoc(state,pos)
-			distToOrder = abs(pos[0]-closestOrder[0]) + abs(pos[1]-closestOrder[1])
-			distHome = closestOrder[0] + closestOrder[1]
-			return (distToOrder + distHome)
-		# else, MD to nearest restaurant + MD to order loc + MD order loc to (0,0)
-		else:
-			closestRestaurant = self.getClosestRestaurant(state,pos)
-			distToRestaurant = abs(pos[0]-closestRestaurant[0])+abs(pos[1]-closestRestaurant[1])
-			closestOrder = self.getClosestOrderLoc(state,closestRestaurant)
-			distToOrder = abs(closestRestaurant[0]-closestOrder[0]) + abs(closestRestaurant[1]-closestOrder[1])
-			distHome = closestOrder[0] + closestOrder[1]
-			return (distToRestaurant + distToOrder + distHome)
-
-
+		return self.heuristic1(state)
+		#return self.heuristic2(state) #NOT ADMISSIBLE
 
 	def setup (self):
 		'''This method must create the initial state, final state (if desired) and specify the algorithm to be used.
